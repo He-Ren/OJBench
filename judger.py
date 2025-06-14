@@ -263,6 +263,7 @@ def test_all_entries(testid: str, input: List, num_workers: int):
                 'final_verdict': final_verdict,
                 'results': results
             }
+            output[i]['is_passed'] = final_verdict == 'AC'
     
     assert len(workers) == num_workers
     for p in workers:
