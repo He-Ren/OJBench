@@ -1,0 +1,275 @@
+import sys
+import copy
+import loguru
+import multiprocessing as mp
+from tqdm import tqdm
+from pathlib import Path
+from typing import Optional, Union, Iterable, List, Tuple, Dict
+from filelock import FileLock
+
+from .judger_config import Config
+from .judger_utils import ensure_list_of_paths
+
+logger = loguru.logger
+config: Optional[Config] = None
+
+_parent = Path(__file__).parent
+_default_config_path = _parent / 'config.yaml'
+_default_compile_lock_path = _parent / 'compile_lock.lock'
+
+def init(
+    problem_dirs: Union[str, Path, Iterable[Union[str, Path]]],
+    config_path: Union[str, Path] = _default_config_path,
+    compile_lock_path: Union[str, Path] = _default_compile_lock_path
+):
+    global config
+
+    if config is not None:
+        logger.error('The \'init\' function can only be called once.')
+        raise RuntimeError('The \'init\' function can only be called once.') 
+    
+    problem_dirs: List[Path] = ensure_list_of_paths(problem_dirs)
+    config_path = Path(config_path)
+    compile_lock_path = Path(compile_lock_path)
+
+    config = Config(config_path=config_path,
+                    problem_dirs=problem_dirs,
+                    compile_lock_path=compile_lock_path,
+                    logger=logger)
+
+    logger.info('Initializing DMOJ judger')
+
+    _init_dmoj_env()
+    _init_dmoj_executors()
+    _init_dmoj_contrib_modules()
+
+    logger.info('DMOJ judger initialized')
+
+def assert_initialized():
+    if config is None:
+        logger.error('The \'init\' function have not been called.')
+        raise RuntimeError('The \'init\' function have not been called.')
+
+def _init_dmoj_env():
+    import dmoj.judgeenv as judgeenv
+
+    judgeenv._problem_dirs_cache = config.problem_dirs.copy()
+    judgeenv.skip_self_test = False
+    judgeenv.only_executors = set(config.supported_languages)
+    judgeenv.env.update(config.runtime_paths.copy())
+
+def _init_dmoj_executors():
+    from dmoj.executors import load_executors, executors
+    load_executors()
+    missing = set(config.supported_languages) - executors.keys()
+    if missing:
+        logger.error(f"Missing executors: {missing}")
+        raise ValueError(f"Required languages not loaded: {missing}")
+
+def _init_dmoj_contrib_modules():
+    from dmoj.contrib import load_contrib_modules
+    load_contrib_modules()
+
+def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, source: str, stop_when_fail: bool = True, use_tqdm = True):
+    from dmoj.error import CompileError, InternalError, OutputLimitExceeded, InvalidCommandException
+    from dmoj.problem import Problem
+    from dmoj.result import Result
+
+    assert_initialized()
+
+    problem = Problem(problem_id=problem_id, time_limit=time_limit, memory_limit=memory_limit, meta={})
+    grader = None
+    readable_main_code = 'AC'
+    skip_rest: bool = False
+    try:
+        with FileLock(config.compile_lock_path):
+            grader = problem.grader_class(judge=None, problem=problem, language=language, source=source)
+    except CompileError:
+        readable_main_code = 'CE'
+        skip_rest = True
+        logger.warning(f'Compile error for problem: {problem_id}, language: {language}')
+    except InternalError:
+        readable_main_code = 'IE'
+        skip_rest = True
+        logger.warning(f'Internal error for problem: {problem_id}, language: {language}')
+    except OutputLimitExceeded:
+        readable_main_code = 'OLE'
+        skip_rest = True
+        logger.warning(f'Output limit exceeded for problem: {problem_id}, language: {language}')
+    except InvalidCommandException:
+        readable_main_code = 'IE'
+        skip_rest = True
+        logger.warning(f'Invalid command exception for problem: {problem_id}, language: {language}')
+
+    results = []
+    if grader is not None:
+        cases = problem.cases()
+        for case in tqdm(cases, desc='Grading', unit='case', disable = not use_tqdm):
+            if skip_rest:
+                r = Result(case, result_flag=Result.SC)
+            else:
+                try:
+                    r = grader.grade(case=case)
+                except Exception as e:
+                    r = Result(case,
+                               result_flag=Result.IE,
+                               feedback = f'Exception {type(e).__name__}: {str(e)}')
+            
+            if readable_main_code == 'AC':
+                readable_main_code = r.readable_codes()[0]
+            
+            if r.readable_codes()[0] != 'AC' and stop_when_fail:
+                skip_rest = True
+
+            result = {
+                'in_file': case.config.get('in'),
+                'out_file': case.config.get('out'),
+                'result_flag': r.result_flag,
+                'readable_main_code': r.readable_codes()[0],
+                'readable_codes': r.readable_codes(),
+                'execution_time': r.execution_time,
+                'wall_clock_time': r.wall_clock_time,
+                'context_switches': r.context_switches,
+                'runtime_version': r.runtime_version,
+                'max_memory': r.max_memory,
+                'output': r.output,
+                'feedback': r.feedback,
+                'extended_feedback': r.extended_feedback,
+                'points': r.points,
+                'total_points': r.total_points,
+            }
+            results.append(result)
+        logger.info(f'Judged problem {problem_id}, language {language}, main code {readable_main_code}')
+    return readable_main_code, results
+
+skip_id = {'nwerc2023_H', 'swerc2023_L', 'loj-3897'}
+
+def test_entry(entry: dict, use_tqdm: bool = True) -> Tuple[str, List[Dict]]:
+
+    from .judger_utils import get_id, get_lang, get_content_original, proc_code, truncate_string
+
+    logger.info('Testing entry')
+
+    id: str = get_id(entry)
+    lang: str = get_lang(entry)
+    content_original: str = get_content_original(entry) 
+
+    content = proc_code(content_original, lang)
+
+    logger.info(f'id: {id}, lang: {lang}, content (first 50 letters): {repr(truncate_string(content))}')
+
+    if id in skip_id:
+        logger.warning(f'Skip {id}')
+        return 'Skip', []
+    
+    lang_in_dmoj = config.language_dict[lang]
+
+    result = judge(
+        problem_id = id,
+        time_limit = 10,
+        memory_limit = 1024 * 1024, # 1GB
+        language = lang_in_dmoj,
+        source = content,
+        stop_when_fail = False,
+        use_tqdm = use_tqdm
+    )
+
+    return result
+
+def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: mp.Queue):
+
+    log_file = open(log_path, 'w')
+    logger.remove()
+    logger.add(log_path, enqueue = True)
+    sys.stdout = log_file
+    sys.stderr = log_file
+
+    while True:
+        logger.info('Waiting for getting from queue...')
+        task = task_queue.get()
+        logger.info(f'Get, type = {type(task)}')
+        if task is None:
+            break
+
+        (entry, lineid) = task
+        
+        result_queue.put(('m', worker_id, f'Start line {lineid + 1}'))
+
+        result = test_entry(entry, lineid)
+
+        result_queue.put(('m', worker_id, f'Complete line {lineid + 1}'))
+        result_queue.put(('r', worker_id, lineid, result))
+    
+    result_queue.put(('m', worker_id, f'Worker {worker_id} quit'))
+    logger.info(f'Worker {worker_id} quit')
+    log_file.close()
+
+def test_all_entries(testid: str, input: List, num_workers: int):
+    output: List = copy.deepcopy(input)
+
+    for t in input:
+        from .judger_utils import get_id
+        from dmoj.judgeenv import get_problem_root
+
+        id = get_id(t)
+        if type(id) == int:
+            id = 'loj-' + str(id)
+        t['id'] = id
+        assert get_problem_root(id) is not None, f'Problem {id} not found'
+    
+    task_queue: mp.Queue = mp.Queue()
+    result_queue: mp.Queue = mp.Queue()
+    
+    num_tasks = len(input)
+    for i in range(num_tasks):
+        task_queue.put((input[i], i))
+    for _ in range(num_workers * 2 + 10):
+        task_queue.put(None)
+    
+    workers: List[mp.Process] = []
+    for wid in range(num_workers):
+        log_path = Path().cwd() / 'worker_logs' / f'worker{wid}.log'
+        log_path.parent.mkdir(exist_ok = True)
+        p = mp.Process(target=worker, args=(wid, log_path, task_queue, result_queue))
+        p.daemon = True
+        p.start()
+        workers.append(p)
+    
+    from .progress_tracker import ProgressTracker
+
+    ptracker = ProgressTracker(total = num_tasks)
+    while not ptracker.is_complete():
+        
+        logger.info(f'---------------------------')
+
+        message = result_queue.get()
+        if message[0] == 'm':
+            logger.info(f'Worker {message[1]}: {message[2]}')
+            continue
+
+        if message[0] == 'r':
+            (_, wid, i, result) = message
+            (final_verdict, results) = result
+
+            ptracker.update()
+            logger.info(f'Test id: {testid}')
+            logger.info(f'Worker {wid} finished line {i + 1} / {len(input)}')
+            logger.info(ptracker.get_progress())
+
+            is_skip = final_verdict == 'Skip'
+            if is_skip:
+                output[i]['is_skip'] = True
+            output[i]['detailed_results'] = {
+                'final_verdict': final_verdict,
+                'results': results
+            }
+    
+    assert len(workers) == num_workers
+    for p in workers:
+        p.terminate()
+        p.join()
+    
+    task_queue.close()
+    result_queue.close()
+    
+    return output
