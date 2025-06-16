@@ -14,7 +14,7 @@ from .utils.judger_utils import ensure_list_of_paths
 logger = loguru.logger
 config: Optional[Config] = None
 
-_root = Path(__file__).parent.parent
+_root = Path(__file__).parent
 _default_runtime_path = _root / 'runtime.yaml'
 _default_config_path = _root / 'config.yaml'
 _default_compile_lock_path = _root / 'compile_lock.lock'
