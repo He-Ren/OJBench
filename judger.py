@@ -7,19 +7,22 @@ from pathlib import Path
 from typing import Optional, Union, Iterable, List, Tuple, Dict
 from filelock import FileLock
 
-from .judger_config import Config
-from .judger_utils import ensure_list_of_paths
+from .utils.result import Result
+from .utils.judger_config import Config
+from .utils.judger_utils import ensure_list_of_paths
 
 logger = loguru.logger
 config: Optional[Config] = None
 
-_parent = Path(__file__).parent
-_default_config_path = _parent / 'config.yaml'
-_default_compile_lock_path = _parent / 'compile_lock.lock'
+_root = Path(__file__).parent.parent
+_default_runtime_path = _root / 'runtime.yaml'
+_default_config_path = _root / 'config.yaml'
+_default_compile_lock_path = _root / 'compile_lock.lock'
 
 def init(
     problem_dirs: Union[str, Path, Iterable[Union[str, Path]]],
     config_path: Union[str, Path] = _default_config_path,
+    runtime_path: Union[str, Path] = _default_runtime_path,
     compile_lock_path: Union[str, Path] = _default_compile_lock_path
 ):
     global config
@@ -33,6 +36,7 @@ def init(
     compile_lock_path = Path(compile_lock_path)
 
     config = Config(config_path=config_path,
+                    runtime_path=runtime_path,
                     problem_dirs=problem_dirs,
                     compile_lock_path=compile_lock_path,
                     logger=logger)
@@ -70,7 +74,7 @@ def _init_dmoj_contrib_modules():
     from dmoj.contrib import load_contrib_modules
     load_contrib_modules()
 
-def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, source: str, stop_when_fail: bool = True, use_tqdm = True):
+def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, source: str, stop_when_fail: bool = True, use_tqdm = True) -> Result:
     from dmoj.error import CompileError, InternalError, OutputLimitExceeded, InvalidCommandException
     from dmoj.problem import Problem
     from dmoj.result import Result
@@ -140,13 +144,13 @@ def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, 
             }
             results.append(result)
         logger.info(f'Judged problem {problem_id}, language {language}, main code {readable_main_code}')
-    return readable_main_code, results
+    return Result(readable_main_code, results)
 
 skip_id = {'nwerc2023_H', 'swerc2023_L', 'loj-3897'}
 
-def test_entry(entry: dict, use_tqdm: bool = True) -> Tuple[str, List[Dict]]:
+def judge_entry(entry: dict, use_tqdm: bool = True) -> Result:
 
-    from .judger_utils import get_id, get_lang, get_content_original, proc_code, truncate_string
+    from .utils.judger_utils import get_id, get_lang, get_content_original, proc_code, truncate_string
 
     logger.info('Testing entry')
 
@@ -160,8 +164,8 @@ def test_entry(entry: dict, use_tqdm: bool = True) -> Tuple[str, List[Dict]]:
 
     if id in skip_id:
         logger.warning(f'Skip {id}')
-        return 'Skip', []
-    
+        return Result('Skip', [])
+         
     lang_in_dmoj = config.language_dict[lang]
 
     result = judge(
@@ -195,7 +199,7 @@ def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: m
         
         result_queue.put(('m', worker_id, f'Start line {lineid + 1}'))
 
-        result = test_entry(entry, lineid)
+        result = judge_entry(entry, lineid)
 
         result_queue.put(('m', worker_id, f'Complete line {lineid + 1}'))
         result_queue.put(('r', worker_id, lineid, result))
@@ -204,11 +208,11 @@ def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: m
     logger.info(f'Worker {worker_id} quit')
     log_file.close()
 
-def test_all_entries(testid: str, input: List, num_workers: int):
+def judge_jsonl_data(testid: str, input: List, num_workers: int):
     output: List = copy.deepcopy(input)
 
     for t in input:
-        from .judger_utils import get_id
+        from .utils.judger_utils import get_id
         from dmoj.judgeenv import get_problem_root
 
         id = get_id(t)
@@ -235,7 +239,7 @@ def test_all_entries(testid: str, input: List, num_workers: int):
         p.start()
         workers.append(p)
     
-    from .progress_tracker import ProgressTracker
+    from .utils.progress_tracker import ProgressTracker
 
     ptracker = ProgressTracker(total = num_tasks)
     while not ptracker.is_complete():
@@ -249,21 +253,24 @@ def test_all_entries(testid: str, input: List, num_workers: int):
 
         if message[0] == 'r':
             (_, wid, i, result) = message
-            (final_verdict, results) = result
+            result: Result
 
             ptracker.update()
             logger.info(f'Test id: {testid}')
             logger.info(f'Worker {wid} finished line {i + 1} / {len(input)}')
             logger.info(ptracker.get_progress())
 
-            is_skip = final_verdict == 'Skip'
-            if is_skip:
-                output[i]['is_skip'] = True
-            output[i]['detailed_results'] = {
-                'final_verdict': final_verdict,
-                'results': results
-            }
-            output[i]['is_passed'] = final_verdict == 'AC'
+            result.write_to_entry(output[i])
+
+            for scale_type in [8, 4, 2, 1]:
+                scale_verdict = result.verdict_after_scale(1 / scale_type)
+                scale_text = f'1/{scale_type}' if scale_type != 1 else '1'
+                scale_text_prefix = f'1/{scale_type}' if scale_type != 1 else ''
+
+                output[i][f'{scale_text_prefix}is_passed'] = (scale_verdict == 'AC')
+                output[i][f'{scale_text_prefix}verdict'] = scale_verdict
+
+                logger.info(f'scale = {scale_text}, verdict = {scale_verdict}')
     
     assert len(workers) == num_workers
     for p in workers:

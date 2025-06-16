@@ -1,7 +1,6 @@
-from typing import Optional, Union, Iterable, List, Dict
+import math
+from typing import Tuple, Union, Iterable, List, Dict
 from pathlib import Path
-import loguru
-import yaml
 
 def truncate_string(s: str, limit: int = 50, suffix: str = "...") -> str:
     """Truncate a string to a maximum length and append a suffix if truncated.

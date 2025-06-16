@@ -1,7 +1,3 @@
 languages:
   cpp: CPP17
   python: PYPY3
-
-runtime:
-  g++17: /usr/bin/g++
-  pypy3: /usr/bin/pypy3

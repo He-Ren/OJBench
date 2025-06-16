@@ -15,6 +15,7 @@ class Config:
 
     def __init__(self,
                  config_path: Path,
+                 runtime_path: Path,
                  problem_dirs: List[Path],
                  compile_lock_path: Path,
                  logger = loguru.logger
@@ -30,12 +31,24 @@ class Config:
                 lang: Dict[str,str] = config['languages']
                 self.language_dict = copy.deepcopy(lang)
                 self.supported_languages = list(lang.values())
-                self.runtime_paths = {'runtime': config['runtime']}
             except Exception as e:
                 logger.error(f'{type(e).__name__}: {e}')
                 logger.error(f'Please check the configuration file: {config_path}')
                 traceback.print_exc()
                 sys.exit(1)
+        
+        runtime_path = Path(runtime_path)
+        self.logger.info(f'runtime_path: {runtime_path}')
+        with open(runtime_path, 'r') as file:
+            runtime = yaml.safe_load(file)
+            try:
+                self.runtime_paths = {'runtime': dict(runtime)}
+            except Exception as e:
+                logger.error(f'{type(e).__name__}: {e}')
+                logger.error(f'Please check the runtime file: {runtime_path}')
+                traceback.print_exc()
+                sys.exit(1)
+
         
         problem_dirs = [Path(l) for l in problem_dirs]
         self.logger.info(f'problem_dirs: {problem_dirs}')
