@@ -27,6 +27,29 @@ def init(
     runtime_path: Union[str, Path] = _default_runtime_path,
     compile_lock_path: Union[str, Path] = _default_compile_lock_path
 ):
+    """
+    Initialize the judger environment.
+
+    This function must be called once before performing any judging tasks.
+
+    Args:
+        problem_dirs (Union[str, Path, Iterable[Union[str, Path]]]):
+            A path or list of paths to problem set directories. Each directory should
+            contain a set of problems to be judged. This is the **only required parameter**.
+        
+        config_path (Union[str, Path], optional):
+            Path to the internal config file.
+            Usually does not need to be changed. Defaults to `config.yaml` in the source root.
+        
+        runtime_path (Union[str, Path], optional):
+            Path to the file that defines runtime commands for each language.
+            Defaults to `runtime.yaml` in the source root.
+        
+        compile_lock_path (Union[str, Path], optional):
+            Path to a lock file used internally to synchronize compilation processes.
+            Usually does not need to be changed. Defaults to `compile_lock.lock` in the source root.
+    """
+
     global config
 
     if config is not None:
@@ -149,6 +172,18 @@ def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, 
     return (readable_main_code, results)
 
 def judge_entry(entry: dict, use_tqdm: bool = True) -> Tuple[str,List]:
+    """
+    Judge a single entry and return the result.
+
+    Args:
+        entry (dict): A dictionary of submission data.
+        use_tqdm (bool, optional): Whether to display a tqdm progress bar during judging. Defaults to True.
+
+    Returns:
+        Tuple[str, List]: A tuple containing:
+            - str: Status.
+            - List: Detailed results.
+    """
 
     from .utils.judger_utils import get_id, get_lang, get_content_original, proc_code, truncate_string
 
@@ -208,7 +243,19 @@ def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: m
     logger.info(f'Worker {worker_id} quit')
     log_file.close()
 
-def judge_jsonl_data(testid: str, input: List, num_workers: int, worker_log_path: Union[str, Path]):
+def judge_jsonl_data(testid: str, input: List[Dict], num_workers: int, worker_log_path: Union[str, Path]) -> List[Dict]:
+    """
+    Judge a list of entries and return the list with results added.
+
+    Args:
+        testid (str): An identifier, can be any strings.
+        input (List[Dict]): A list of entries.
+        num_workers (int): Number of worker processes to use for judging.
+        worker_log_path (Union[str, Path]): Directory path where worker logs are stored.
+
+    Returns:
+        List[Dict]: The result.
+    """
     output: List = copy.deepcopy(input)
 
     for t in input:
