@@ -19,6 +19,8 @@ _default_runtime_path = _root / 'runtime.yaml'
 _default_config_path = _root / 'config.yaml'
 _default_compile_lock_path = _root / 'compile_lock.lock'
 
+_skip_id = {'nwerc2023_H', 'swerc2023_L', 'loj-3897'}
+
 def init(
     problem_dirs: Union[str, Path, Iterable[Union[str, Path]]],
     config_path: Union[str, Path] = _default_config_path,
@@ -74,7 +76,7 @@ def _init_dmoj_contrib_modules():
     from dmoj.contrib import load_contrib_modules
     load_contrib_modules()
 
-def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, source: str, stop_when_fail: bool = True, use_tqdm = True) -> Result:
+def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, source: str, stop_when_fail: bool = True, use_tqdm = True) -> Tuple[str,List]:
     from dmoj.error import CompileError, InternalError, OutputLimitExceeded, InvalidCommandException
     from dmoj.problem import Problem
     from dmoj.result import Result
@@ -144,11 +146,9 @@ def judge(problem_id: str, time_limit: float, memory_limit: int, language: str, 
             }
             results.append(result)
         logger.info(f'Judged problem {problem_id}, language {language}, main code {readable_main_code}')
-    return Result(readable_main_code, results)
+    return (readable_main_code, results)
 
-skip_id = {'nwerc2023_H', 'swerc2023_L', 'loj-3897'}
-
-def judge_entry(entry: dict, use_tqdm: bool = True) -> Result:
+def judge_entry(entry: dict, use_tqdm: bool = True) -> Tuple[str,List]:
 
     from .utils.judger_utils import get_id, get_lang, get_content_original, proc_code, truncate_string
 
@@ -162,9 +162,9 @@ def judge_entry(entry: dict, use_tqdm: bool = True) -> Result:
 
     logger.info(f'id: {id}, lang: {lang}, content (first 50 letters): {repr(truncate_string(content))}')
 
-    if id in skip_id:
+    if id in _skip_id:
         logger.warning(f'Skip {id}')
-        return Result('Skip', [])
+        return ('Skip', [])
          
     lang_in_dmoj = config.language_dict[lang]
 
@@ -208,7 +208,7 @@ def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: m
     logger.info(f'Worker {worker_id} quit')
     log_file.close()
 
-def judge_jsonl_data(testid: str, input: List, num_workers: int):
+def judge_jsonl_data(testid: str, input: List, num_workers: int, worker_log_path: Union[str, Path]):
     output: List = copy.deepcopy(input)
 
     for t in input:
@@ -219,7 +219,9 @@ def judge_jsonl_data(testid: str, input: List, num_workers: int):
         if type(id) == int:
             id = 'loj-' + str(id)
         t['id'] = id
-        assert get_problem_root(id) is not None, f'Problem {id} not found'
+        
+        if id not in _skip_id:
+            assert get_problem_root(id) is not None, f'Problem {id} not found'
     
     task_queue: mp.Queue = mp.Queue()
     result_queue: mp.Queue = mp.Queue()
@@ -231,9 +233,10 @@ def judge_jsonl_data(testid: str, input: List, num_workers: int):
         task_queue.put(None)
     
     workers: List[mp.Process] = []
+    worker_log_path = Path(worker_log_path)
+    worker_log_path.mkdir(exist_ok = True)
     for wid in range(num_workers):
-        log_path = Path().cwd() / 'worker_logs' / f'worker{wid}.log'
-        log_path.parent.mkdir(exist_ok = True)
+        log_path = worker_log_path / f'worker{wid}.log'
         p = mp.Process(target=worker, args=(wid, log_path, task_queue, result_queue))
         p.daemon = True
         p.start()
@@ -253,7 +256,7 @@ def judge_jsonl_data(testid: str, input: List, num_workers: int):
 
         if message[0] == 'r':
             (_, wid, i, result) = message
-            result: Result
+            result = Result(result[0], result[1])
 
             ptracker.update()
             logger.info(f'Test id: {testid}')

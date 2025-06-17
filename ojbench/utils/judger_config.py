@@ -52,7 +52,7 @@ class Config:
         
         problem_dirs = [Path(l) for l in problem_dirs]
         self.logger.info(f'problem_dirs: {problem_dirs}')
-        for l in self.problem_dirs:
+        for l in problem_dirs:
             assert l.exists(), f'Problem dir does not exist: {l}'
         self.problem_dirs = problem_dirs
 
