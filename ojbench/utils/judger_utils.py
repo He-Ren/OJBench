@@ -1,4 +1,4 @@
-import math
+import json
 from typing import Tuple, Union, Iterable, List, Dict
 from pathlib import Path
 
@@ -14,7 +14,6 @@ def assert_directory_exists(dir_path: Union[str, Path]):
     if not dir_path.is_dir():
         raise NotADirectoryError(f"The path '{dir_path}' is not a directory.")
 
-
 def assert_file_exists(file_path: Union[str, Path]):
     file_path = Path(file_path)
     if not file_path.exists():
@@ -29,6 +28,25 @@ def ensure_list_of_paths(paths: Union[str, Path, Iterable[Union[str, Path]]]) ->
         return [Path(p) for p in paths]
     else:
         raise TypeError(f"Unsupported type: {type(paths)}")
+
+def read_jsonl(path: Path) -> List[Dict]:
+    with open(path, "r") as f:
+        return [json.loads(line) for line in f]
+
+def write_jsonl(data: List[Dict], path: Path):
+    with open(path, "w") as f:
+        for item in data:
+           f.write(json.dumps(item) + "\n")
+
+def proc_code(code: str, lang: str):
+    """Extract the code content.
+    """
+    # code = code.partition(f'```{lang}\n')[2].rpartition('```')[0]
+    # return code
+    code = code.split(f'```{lang}\n')[-1].split('\n```')[0]
+    if code.count("def main():") == 1 and code.count("main()") == 1:
+        code += "\nmain()"
+    return code
 
 def get_id(entry: dict) -> str:
     if 'id' in entry:
