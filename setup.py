@@ -2,5 +2,5 @@ import setuptools
 
 setuptools.setup(
   name="ojbench",
-  version="0.0.1",
+  version="0.0.2",
 )
