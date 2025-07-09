@@ -9,7 +9,7 @@ from filelock import FileLock
 
 from .utils.result import Result
 from .utils.judger_config import Config
-from .utils.judger_utils import ensure_list_of_paths
+from .utils.judger_utils import ensure_list_of_paths, read_jsonl, write_jsonl
 
 logger = loguru.logger
 config: Optional[Config] = None
@@ -243,15 +243,15 @@ def worker(worker_id: int, log_path: Path, task_queue: mp.Queue, result_queue: m
     logger.info(f'Worker {worker_id} quit')
     log_file.close()
 
-def judge_jsonl_data(testid: str, input: List[Dict], num_workers: int, worker_log_path: Union[str, Path]) -> List[Dict]:
+def judge_jsonl_data(input: List[Dict], num_workers: int = 16, worker_log_path: Union[str, Path, None] = None, identifier: Union[str, None] = None) -> List[Dict]:
     """
     Judge a list of entries and return the list with results added.
 
     Args:
-        testid (str): An identifier, can be any strings.
         input (List[Dict]): A list of entries.
         num_workers (int): Number of worker processes to use for judging.
-        worker_log_path (Union[str, Path]): Directory path where worker logs are stored.
+        worker_log_path (Union[str, Path, None]): Directory path where worker logs are stored. '/dev/null' will be used if set to None. Default to None.
+        identifier (Union[srt, None]): An identifier for this test group, just used for printing the log. Default to None.
 
     Returns:
         List[Dict]: The result.
@@ -280,10 +280,11 @@ def judge_jsonl_data(testid: str, input: List[Dict], num_workers: int, worker_lo
         task_queue.put(None)
     
     workers: List[mp.Process] = []
-    worker_log_path = Path(worker_log_path)
-    worker_log_path.mkdir(exist_ok = True)
+    if worker_log_path is not None:
+        worker_log_path = Path(worker_log_path)
+        worker_log_path.mkdir(exist_ok = True)
     for wid in range(num_workers):
-        log_path = worker_log_path / f'worker{wid}.log'
+        log_path = worker_log_path / f'worker{wid}.log' if worker_log_path is not None else Path('/dev/null')
         p = mp.Process(target=worker, args=(wid, log_path, task_queue, result_queue))
         p.daemon = True
         p.start()
@@ -306,7 +307,8 @@ def judge_jsonl_data(testid: str, input: List[Dict], num_workers: int, worker_lo
             result = Result(result[0], result[1])
 
             ptracker.update()
-            logger.info(f'Test id: {testid}')
+            if identifier is not None:
+                logger.info(f'Testing: [{identifier}]')
             logger.info(f'Worker {wid} finished line {i + 1} / {len(input)}')
             logger.info(ptracker.get_progress())
 
@@ -330,4 +332,16 @@ def judge_jsonl_data(testid: str, input: List[Dict], num_workers: int, worker_lo
     task_queue.close()
     result_queue.close()
     
+    return output
+
+def judge_jsonl(input_path: Union[str, Path], output_path: Union[str, Path, None] = None, num_workers: int = 16, worker_log_path: Union[str, Path, None] = None, identifier: Union[str, None] = None) -> List[Dict]:
+    if identifier is None:
+        identifier = str(input_path)
+    input = read_jsonl(input_path)
+    output = judge_jsonl_data(input = input,
+                              num_workers = num_workers,
+                              worker_log_path = worker_log_path,
+                              identifier = identifier)
+    if output_path is not None:
+        write_jsonl(output, output_path)
     return output
