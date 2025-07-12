@@ -1,9 +1,46 @@
+# OJBench
+Official repository for the paper [OJBench: A Competition Level Code Benchmark For Large Language Models](https://arxiv.org/pdf/2506.16395)
+
+
 ## Introduction
+OJBench is a comprehensive and challenging benchmark specifically designed to assess LLMs’ code-reasoning capabilities at the competition level. Our dataset focuses exclusively on human programming contests and comprises 232 rigorously-selected competition problems sourced from China’s National Olympiad in Informatics (NOI) and the International Collegiate Programming Contest (ICPC). These problems are meticulously classified into three difficulty tiers-Easy, Medium, and Hard—derived from contestant voting and real-world submission statistics, and span across bilingual evaluation in both Python and C++.We evaluate numerous models on OJBench, covering open-source/closed-source, reasoning/non-reasoning, 7 B–671 B models.
+
+
+
+## 🔥News
+
+- *2025-7*: We have open-sourced our evaluation code and are continually improving it.
+
+- *2025-6*: We have released the OJBench dataset and our paper.
+
+
+## Key Findings: Performance of State-of-the-Art Models
+
+> ⚠️ **State-of-the-Art Models Struggle**  
+> Even advanced reasoning-oriented models, such as o4-mini and Gemini-2.5-pro-exp, struggle with highly challenging competition-level problems.
+
+> 📈 **Reasoning Models Outperform**  
+> Reasoning-oriented models significantly outperformed non-reasoning-oriented models in competitive coding tasks.
+
+> 🔄 **Open-Source vs Closed-Source Gap**  
+> Open-source models were observed to still lag behind closed-source models in terms of code reasoning ability.
+
+> ⚡ **C++ Performance Advantage**  
+> For most long-chain-of-thought (CoT) models, using C++ resulted in better performance compared to Python.
+
+> 🛠️ **Feedback Utilization**  
+> Models are capable of leveraging feedback from the code execution environment to refine their erroneous solutions.
+
+> 📄 **For More Details**  
+> Please refer to the full paper for experimental design, evaluation metrics, and comprehensive analysis.
+
+### Prerequisites
 
 OJBench is a benchmark designed to evaluate a model's ability to solve competitive programming tasks.
 
 ## Installation
 
+### 1. Install DMOJ
 ### 1. Install DMOJ
 
 Clone the DMOJ repository, check out the specific commit, and install it:
