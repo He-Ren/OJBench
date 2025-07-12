@@ -3,7 +3,7 @@ Official repository for the paper [OJBench: A Competition Level Code Benchmark F
 
 
 ## Introduction
-OJBench is a comprehensive and challenging benchmark specifically designed to assess LLMs’ code-reasoning capabilities at the competition level. Our dataset focuses exclusively on human programming contests and comprises 232 rigorously-selected competition problems sourced from China’s National Olympiad in Informatics (NOI) and the International Collegiate Programming Contest (ICPC). These problems are meticulously classified into three difficulty tiers—Easy, Medium, and Hard—derived from contestant voting and real-world submission statistics, and span across bilingual evaluation in both Python and C++.We evaluate numerous models on OJBench, covering open-source/closed-source, reasoning/non-reasoning, 7 B–671 B models.
+OJBench is a comprehensive and challenging benchmark specifically designed to assess LLMs’ code-reasoning capabilities at the competition level. Our dataset focuses exclusively on human programming contests and comprises 232 rigorously-selected competition problems sourced from China’s National Olympiad in Informatics (NOI) and the International Collegiate Programming Contest (ICPC). These problems are meticulously classified into three difficulty tiers-Easy, Medium, and Hard—derived from contestant voting and real-world submission statistics, and span across bilingual evaluation in both Python and C++.We evaluate numerous models on OJBench, covering open-source/closed-source, reasoning/non-reasoning, 7 B–671 B models.
 
 
 
