@@ -41,7 +41,6 @@ OJBench is a benchmark designed to evaluate a model's ability to solve competiti
 ## Installation
 
 ### 1. Install DMOJ
-### 1. Install DMOJ
 
 Clone the DMOJ repository, check out the specific commit, and install it:
 
@@ -110,6 +109,8 @@ Note that in this file, each problem has both a `cpp` version and a `python` ver
 To judge the answer, you should generate a jsonl file, containing **all the fields above**, and also the following key:
 - `content`: A string, representing the response of your model.
 
+*Note that, you do not have to extract the code manually from the response. The liabriary will extract it automaticaly if the answer of your model follows the format given by the prompt.*
+
 For example, an answer file might be looking like this:
 ```json
 {"id": 1000, "prompt": "...", "dataset": "NOI", "language": "cpp", "difficulty": "hard", "content": "Here is the code: ..."}
@@ -125,3 +126,20 @@ Set up the judging environment. Every parameters except `problem_dirs` has a def
 - `config_path`: Path to the internal config file.
 - `runtime_path`: Path to the file that defines runtime commands for each language.
 - `compile_lock_path`: Path to a lock file used internally to synchronize compilation processes.
+
+### `def judge_jsonl(input_path, output_path = None, num_worker = 16, worker_log_path = None, identifier = None) -> List[Dict]:`
+
+Judge the answer file. Return the judged result. The result is a jsonl file stored in a list of dictionary. It keeps all the keys in the original answer file, and adds the followings:
+- `detailed_results`: The detailed results, including the final verdict, and the verdict and judging message for each test cases.
+- `verdict`: A string, representing the judging verdict of your answer.
+- `is_passed`: A boolean value, representing if your answer has passed (i.e. if `verdict` is `AC`).
+- `1/8verdict`, `1/8is_passed`, `1/4verdict`, `1/4is_passed`, `1/2verdict`, `1/2is_passed`: The same as above, but only keep the first $1/8$, $1/4$ and $1/2$ ratio of test cases, respectively.
+
+The judging will be done is a multiprocess manner. For the details, please see the parameters.
+
+Parameters:
+- `input_path`: The path of input file (the answer of the model).
+- `output_path`: The path of result. Defaut to `None`. If it is set to `None`, the result will not be written. Note that whenever it is `None` or not, the function will always return the result.
+- `num_worker`: The number of worker processes. Defaut to $16$.
+- `worker_log_path`: The path where workers print their log. Default to `None`. Note that it should be a path to a **folder** or `None`, if it is `None`, the worker will print their log to `/dev/null`.
+- `identifier`: An identifier, just used to be shown in the log. Default to `None`.
