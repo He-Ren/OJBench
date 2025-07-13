@@ -2,9 +2,9 @@
 Official repository for the paper [OJBench: A Competition Level Code Benchmark For Large Language Models](https://arxiv.org/pdf/2506.16395)
 
 
-## Introduction
-OJBench is a comprehensive and challenging benchmark specifically designed to assess LLMs’ code-reasoning capabilities at the competition level. Our dataset focuses exclusively on human programming contests and comprises 232 rigorously-selected competition problems sourced from China’s National Olympiad in Informatics (NOI) and the International Collegiate Programming Contest (ICPC). These problems are meticulously classified into three difficulty tiers-Easy, Medium, and Hard—derived from contestant voting and real-world submission statistics, and span across bilingual evaluation in both Python and C++.We evaluate numerous models on OJBench, covering open-source/closed-source, reasoning/non-reasoning, 7 B–671 B models.
+## 📘 Introduction
 
+**OJBench** is a comprehensive and challenging benchmark designed to evaluate the code reasoning capabilities of large language models (LLMs) at the competition level. Our dataset focuses exclusively on human programming contests and comprises 232 rigorously-selected competition problems sourced from **China’s National Olympiad in Informatics (NOI)** and the **International Collegiate Programming Contest (ICPC)**. Each problem is meticulously categorized into three difficulty levels—**Easy**, **Medium**, and **Hard**—based on contestant votes and real-world submission data. OJBench supports bilingual evaluation in both **Python** and **C++**, enabling a broad and realistic assessment. We benchmark a wide range of models on OJBench, spanning both **open-source and closed-source**, **reasoning and non-reasoning** types, with sizes ranging from **7B to 671B** parameters.
 
 
 ## 🔥News
@@ -14,7 +14,7 @@ OJBench is a comprehensive and challenging benchmark specifically designed to as
 - *2025-6*: We have released the OJBench dataset and our paper.
 
 
-## Key Findings: Performance of State-of-the-Art Models
+## 📊 Key Findings: Performance of State-of-the-Art Models
 
 > ⚠️ **State-of-the-Art Models Struggle**  
 > Even advanced reasoning-oriented models, such as o4-mini and Gemini-2.5-pro-exp, struggle with highly challenging competition-level problems.
@@ -34,7 +34,7 @@ OJBench is a comprehensive and challenging benchmark specifically designed to as
 > 📄 **For More Details**  
 > Please refer to the full paper for experimental design, evaluation metrics, and comprehensive analysis.
 
-## Prerequisites
+## 🧰 Prerequisites
 
 Before installing OJBench, make sure your system has the following tools installed:
 
@@ -48,9 +48,9 @@ g++ --version
 pypy3 --version
 ```
 
-## Installation
+## 💾 Installation
 
-### 1. Install DMOJ
+### 📦 1. Install DMOJ
 
 Clone the DMOJ repository, check out a specific commit, and install it:
 
@@ -62,11 +62,11 @@ pip install .
 cd ..
 ```
 
-> ✅ *Tip: You can install in editable mode with `pip install -e .` during development.*
+> *Tip: You can install in editable mode with `pip install -e .` during development.*
 
 ---
 
-### 2. Install OJBench
+### 2. 🐙 Clone and Configure OJBench
 
 Clone the OJBench repository:
 
@@ -74,7 +74,7 @@ Clone the OJBench repository:
 git clone git@github.com:He-Ren/OJBench.git
 ```
 
-#### 🔧 Runtime Configuration
+#### ⚙️ Runtime Configuration
 
 OJBench uses a runtime configuration file to locate these tools. Open:
 
@@ -98,7 +98,7 @@ which g++
 which pypy3
 ```
 
-#### 📦 Install OJBench
+#### ✅ Install OJBench
 
 After configuring paths, install the library in editable mode:
 
@@ -110,7 +110,7 @@ pip install -e OJBench
 
 ---
 
-### 3. Download Test Data
+### 3. 🗂️ Download Test Data
 
 Test inputs are hosted on Hugging Face:
 [https://huggingface.co/He-Ren/OJBench\_testdata](https://huggingface.co/He-Ren/OJBench_testdata)
@@ -142,7 +142,7 @@ OJBench_testdata/
 
 ---
 
-## Generating Model Responses
+## 🤖 Generating Model Responses
 
 The `full.jsonl` file contains one prompt per line, each formatted as a JSON object with the following fields:
 
@@ -158,7 +158,7 @@ You should generate a new `.jsonl` file with all of the above fields, and add:
 
 * `content`: A string containing the model's full response
 
-> 🧠 **Note**: If your model response follows the format given in the prompt, the library can extract the code automatically. You do **not** need to parse it manually.
+> **Note**: If your model response follows the format given in the prompt, the library can extract the code automatically. You do **not** need to parse it manually.
 
 Example output:
 
@@ -169,7 +169,7 @@ Example output:
 
 ---
 
-## API
+## 📚 API
 
 ### `init(problem_dirs, config_path=..., runtime_path=..., compile_lock_path=...) -> None`
 
@@ -195,7 +195,7 @@ It sets up the internal configuration, compiler/runtime paths, and compilation l
   Path to a lock file used to synchronize compilation steps between parallel workers.
   Defaults to the built-in file in the `ojbench` package.
 
-#### Example usage:
+#### Example:
 
 ```python
 from pathlib import Path
@@ -207,7 +207,7 @@ ojbench.init(problem_dirs=[
 ])
 ```
 
-> ℹ️ This function only needs to be called once at the start of your evaluation script.
+> This function only needs to be called once at the start of your evaluation script.
 
 ---
 
@@ -317,7 +317,7 @@ results = ojbench.judge_jsonl_data(responses, num_workers=4)
 
 ---
 
-## Example
+## 📝 Example
 
 Suppose your directory structure looks like:
 
@@ -352,3 +352,19 @@ python test.py
 ```
 
 You will get `judged.jsonl` in the current directory with the results.
+
+---
+
+## 💬 Citation
+If you find our work interesting and meaningful, welcome to give a 🌟 to our repo and cite our paper.
+```
+@misc{wang2025ojbenchcompetitionlevelcode,
+      title={OJBench: A Competition Level Code Benchmark For Large Language Models}, 
+      author={Zhexu Wang and Yiping Liu and Yejie Wang and Wenyang He and Bofei Gao and Muxi Diao and Yanxu Chen and Kelin Fu and Flood Sung and Zhilin Yang and Tianyu Liu and Weiran Xu},
+      year={2025},
+      eprint={2506.16395},
+      archivePrefix={arXiv},
+      primaryClass={cs.CL},
+      url={https://arxiv.org/abs/2506.16395}, 
+}
+```
