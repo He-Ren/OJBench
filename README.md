@@ -34,15 +34,25 @@ OJBench is a comprehensive and challenging benchmark specifically designed to as
 > 📄 **For More Details**  
 > Please refer to the full paper for experimental design, evaluation metrics, and comprehensive analysis.
 
-### Prerequisites
+## Prerequisites
 
-OJBench is a benchmark designed to evaluate a model's ability to solve competitive programming tasks.
+Before installing OJBench, make sure your system has the following tools installed:
+
+* **C++17-compatible compiler**, such as `g++` version **7.0 or later**
+* **PyPy3 interpreter**
+
+You can check their versions using:
+
+```bash
+g++ --version
+pypy3 --version
+```
 
 ## Installation
 
 ### 1. Install DMOJ
 
-Clone the DMOJ repository, check out the specific commit, and install it:
+Clone the DMOJ repository, check out a specific commit, and install it:
 
 ```bash
 git clone https://github.com/DMOJ/judge-server.git
@@ -52,40 +62,73 @@ pip install .
 cd ..
 ```
 
+> ✅ *Tip: You can install in editable mode with `pip install -e .` during development.*
+
+---
+
 ### 2. Install OJBench
 
-Clone the OJBench library:
+Clone the OJBench repository:
 
 ```bash
 git clone git@github.com:He-Ren/OJBench.git
 ```
 
-Next, open `OJBench/ojbench/runtime.yaml` to verify the paths for `g++17` and `pypy3`. By default, these are set as follows:
+#### 🔧 Runtime Configuration
+
+OJBench uses a runtime configuration file to locate these tools. Open:
+
+```
+OJBench/ojbench/runtime.yaml
+```
+
+It should look like this by default:
+
 ```yaml
 g++17: /usr/bin/g++
 pypy3: /usr/bin/pypy3
 ```
-You can modify this file to change their paths.
 
-Install OJBench:
+Update these paths to point to the actual locations of `g++` and `pypy3` on your system.
 
-``` bash
+To find their paths, run:
+
+```bash
+which g++
+which pypy3
+```
+
+#### 📦 Install OJBench
+
+After configuring paths, install the library in editable mode:
+
+```bash
 pip install -e OJBench
 ```
 
+> 📁 Make sure you're in the parent directory of `OJBench` when running this command.
+
+---
+
 ### 3. Download Test Data
 
-Test inputs are hosted on Hugging Face under `https://huggingface.co/He-Ren/OJBench_testdata`. You can clone it with Git LFS.
+Test inputs are hosted on Hugging Face:
+[https://huggingface.co/He-Ren/OJBench\_testdata](https://huggingface.co/He-Ren/OJBench_testdata)
 
-If you don't have Git LFS installed, run `git lfs install` first.
+If you don't have Git LFS, install it first:
 
-Run:
+```bash
+git lfs install
+```
+
+Then clone the dataset:
 
 ```bash
 git clone https://huggingface.co/He-Ren/OJBench_testdata
 ```
 
-The test data has the following structure:
+The data is structured as follows:
+
 ```
 OJBench_testdata/
 ├── ICPC/
@@ -93,53 +136,219 @@ OJBench_testdata/
 └── prompts/
     └── full.jsonl
 ```
-Here, `ICPC/` and `NOI/` contain test data for ICPC and NOI tasks, respectively, and `prompts/full.jsonl` contains prompts for those tasks.
 
-## Generate answer
+* `ICPC/` and `NOI/` contain the test cases.
+* `prompts/full.jsonl` contains model prompts for all tasks. These prompts include task descriptions as well as constraints on the format of the model's response.
 
-`OJBench_testdata/prompts/full.jsonl` is a `jsonl` file of prompts. Each line of this file is a json structure containing the following fields:
-- `prompt`: The prompt you should provide to your model. This prompts contains the problem discription and the language that your model should use to write the code.
-- `id`: Problem id.
-- `dataset`: `NOI` or `ICPC`.
-- `language`: `cpp` or `python`, the same language as in `prompt`.
-- `difficulty`: `easy`, `medium` or `hard`, representing the difficulty of this task.
+---
 
-Note that in this file, each problem has both a `cpp` version and a `python` version.
+## Generating Model Responses
 
-To judge the answer, you should generate a jsonl file, containing **all the fields above**, and also the following key:
-- `content`: A string, representing the response of your model.
+The `full.jsonl` file contains one prompt per line, each formatted as a JSON object with the following fields:
 
-*Note that, you do not have to extract the code manually from the response. The liabriary will extract it automaticaly if the answer of your model follows the format given by the prompt.*
+* `id`: Unique problem ID
+* `prompt`: The text prompt to provide to the model
+* `dataset`: `"ICPC"` or `"NOI"`
+* `language`: `"cpp"` or `"python"`
+* `difficulty`: `"easy"`, `"medium"`, or `"hard"`
 
-For example, an answer file might be looking like this:
+Each problem has both a C++ and Python version.
+
+You should generate a new `.jsonl` file with all of the above fields, and add:
+
+* `content`: A string containing the model's full response
+
+> 🧠 **Note**: If your model response follows the format given in the prompt, the library can extract the code automatically. You do **not** need to parse it manually.
+
+Example output:
+
 ```json
 {"id": 1000, "prompt": "...", "dataset": "NOI", "language": "cpp", "difficulty": "hard", "content": "Here is the code: ..."}
 {"id": 1001, "prompt": "...", "dataset": "ICPC", "language": "python", "difficulty": "easy", "content": "The server is busy. Please try again later."}
 ```
 
+---
+
 ## API
 
-### `def init(problem_dirs, config_path = ..., runtime_path = ..., compile_lock_path = ...) -> None`
+### `init(problem_dirs, config_path=..., runtime_path=..., compile_lock_path=...) -> None`
 
-Set up the judging environment. Every parameters except `problem_dirs` has a default setting, which usually does not need to be changed. Parameters:
-- `problem_dirs`: A list of problem directories.
-- `config_path`: Path to the internal config file.
-- `runtime_path`: Path to the file that defines runtime commands for each language.
-- `compile_lock_path`: Path to a lock file used internally to synchronize compilation processes.
+Initializes the judging environment. This function must be called **before** any judging operations.
 
-### `def judge_jsonl(input_path, output_path = None, num_worker = 16, worker_log_path = None, identifier = None) -> List[Dict]:`
+It sets up the internal configuration, compiler/runtime paths, and compilation lock required for running tests. Only `problem_dirs` is mandatory; the other arguments have reasonable defaults and typically do not need to be modified.
 
-Judge the answer file. Return the judged result. The result is a jsonl file stored in a list of dictionary. It keeps all the keys in the original answer file, and adds the followings:
-- `detailed_results`: The detailed results, including the final verdict, and the verdict and judging message for each test cases.
-- `verdict`: A string, representing the judging verdict of your answer.
-- `is_passed`: A boolean value, representing if your answer has passed (i.e. if `verdict` is `AC`).
-- `1/8verdict`, `1/8is_passed`, `1/4verdict`, `1/4is_passed`, `1/2verdict`, `1/2is_passed`: The same as above, but only keep the first $1/8$, $1/4$ and $1/2$ ratio of test cases, respectively.
+#### Parameters:
 
-The judging will be done is a multiprocess manner. For the details, please see the parameters.
+* **`problem_dirs`** (`Union[str, Path, Iterable[Union[str, Path]]]`):
+  A path or list of paths pointing to problem directories.
 
-Parameters:
-- `input_path`: The path of input file (the answer of the model).
-- `output_path`: The path of result. Defaut to `None`. If it is set to `None`, the result will not be written. Note that whenever it is `None` or not, the function will always return the result.
-- `num_worker`: The number of worker processes. Defaut to $16$.
-- `worker_log_path`: The path where workers print their log. Default to `None`. Note that it should be a path to a **folder** or `None`, if it is `None`, the worker will print their log to `/dev/null`.
-- `identifier`: An identifier, just used to be shown in the log. Default to `None`.
+* **`config_path`** (`str | Path`, optional):
+  Path to the internal configuration file (`config.yaml`).
+  Defaults to the built-in config file in the `ojbench` package.
+
+* **`runtime_path`** (`str | Path`, optional):
+  Path to the runtime definition file (`runtime.yaml`).
+  Make sure this file reflects the actual paths to compilers/interpreters on your machine.
+  Defaults to `ojbench/runtime.yaml`.
+
+* **`compile_lock_path`** (`str | Path`, optional):
+  Path to a lock file used to synchronize compilation steps between parallel workers.
+  Defaults to the built-in file in the `ojbench` package.
+
+#### Example usage:
+
+```python
+from pathlib import Path
+import ojbench
+
+ojbench.init(problem_dirs=[
+    Path('OJBench_testdata/NOI'),
+    Path('OJBench_testdata/ICPC'),
+])
+```
+
+> ℹ️ This function only needs to be called once at the start of your evaluation script.
+
+---
+
+### `judge_jsonl(input_path, output_path=None, num_workers=16, worker_log_path=None, identifier=None) -> List[Dict]`
+
+Evaluates a `.jsonl` file of model-generated answers and returns the judging results.
+
+This function reads the input JSONL file, where each line represents model response of a task. It performs automatic code extraction and judging, then returns a list of result dictionaries.
+
+If `output_path` is specified, the results are also saved to that file in `.jsonl` format.
+
+#### Input Format
+
+Each line in the input file must be a JSON object with the following keys:
+
+* `id`: Problem ID
+* `content`: The model’s response string
+
+> The library will extract code from `content` automatically.
+
+#### Output Format
+
+Each output dictionary contains:
+
+* All original fields (`id`, `content`, etc.)
+* `verdict`: Final verdict string (e.g., `"AC"`, `"WA"`, `"RE"`)
+* `is_passed`: Boolean indicating whether `verdict == "AC"`
+* `detailed_results`: Per-testcase judging results, including verdict and message for each test
+* `1/8verdict`, `1/4verdict`, `1/2verdict`: Verdicts computed using only the first 1/8, 1/4, and 1/2 of testcases, respectively
+* `1/8is_passed`, `1/4is_passed`, `1/2is_passed`: Corresponding boolean pass flags
+
+> These partial verdicts are useful for progressive evaluation and analysis of model performance.
+
+#### Parameters
+
+* **`input_path`** (`str | Path`):
+  Path to the input `.jsonl` file containing model's response.
+
+* **`output_path`** (`str | Path | None`, default: `None`):
+  Path to save the judged results as a `.jsonl` file.
+  If `None`, the results are not written to disk, only returned.
+
+* **`num_workers`** (`int`, default: `16`):
+  Number of parallel processes used for judging.
+  Adjust this based on available CPU cores and memory.
+
+* **`worker_log_path`** (`str | Path | None`, default: `None`):
+  Directory where each worker will write logs.
+  If `None`, logs are suppressed (redirected to `/dev/null`).
+
+* **`identifier`** (`str | None`, default: `None`):
+  Optional identifier string shown in logs, useful for debugging or labeling experiments.
+
+#### Example
+
+```python
+ojbench.judge_jsonl(
+    input_path="model_response.jsonl",
+    output_path="judged.jsonl",
+    num_workers=8,
+    worker_log_path="logs/",
+    identifier="run1"
+)
+```
+
+---
+
+### `judge_jsonl_data(input, num_workers=16, worker_log_path=None, identifier=None) -> List[Dict]`
+
+Judges a list of model-generated responses (in memory) and returns the evaluation results.
+
+This function is equivalent to `judge_jsonl`, but instead of reading from a file, it accepts a list of dictionaries directly.
+
+The input and output formats are identical to those of `judge_jsonl`.
+
+#### Parameters
+
+* **`input`** (`List[Dict]`):
+  A list of model responses, each in the same format as a single line from a `.jsonl` input file.
+
+* **`num_workers`** (`int`, default: `16`):
+  Number of parallel worker processes used for judging.
+  Adjust this based on system resources.
+
+* **`worker_log_path`** (`str | Path | None`, default: `None`):
+  Directory where each worker writes its log.
+  If `None`, logs are discarded (written to `/dev/null`).
+
+* **`identifier`** (`str | None`, default: `None`):
+  Optional identifier string shown in worker logs, useful for debugging or labeling experiments.
+
+#### Example
+
+```python
+responses = [
+    {
+        "id": 1234,
+        "prompt": "Write a function to add two integers...",
+        "dataset": "ICPC",
+        "language": "python",
+        "difficulty": "easy",
+        "content": "Here is the code:\n```python\ndef add(a, b): return a + b\n```"
+    }
+]
+results = ojbench.judge_jsonl_data(responses, num_workers=4)
+```
+
+---
+
+## Example
+
+Suppose your directory structure looks like:
+
+```
+OJBench_testdata/
+├── ICPC/
+├── NOI/
+└── prompts/
+    └── full.jsonl
+test.py
+model_response.jsonl
+```
+
+Then your test script `test.py` can look like:
+
+```python
+import ojbench
+from pathlib import Path
+
+ojbench.init(problem_dirs=[
+    Path('OJBench_testdata/NOI'),
+    Path('OJBench_testdata/ICPC'),
+])
+
+ojbench.judge_jsonl('model_response.jsonl', 'judged.jsonl')
+```
+
+After running:
+
+```bash
+python test.py
+```
+
+You will get `judged.jsonl` in the current directory with the results.
