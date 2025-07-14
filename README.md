@@ -50,7 +50,7 @@ pypy3 --version
 
 ## 💾 Installation
 
-### 📦 1. Install DMOJ
+### 1. Install DMOJ
 
 Clone the DMOJ repository, check out a specific commit, and install it:
 
@@ -66,7 +66,7 @@ cd ..
 
 ---
 
-### 2. 🐙 Clone and Configure OJBench
+### 2. Clone and Configure OJBench
 
 Clone the OJBench repository:
 
@@ -98,7 +98,7 @@ which g++
 which pypy3
 ```
 
-#### ✅ Install OJBench
+#### Install OJBench
 
 After configuring paths, install the library in editable mode:
 
@@ -110,7 +110,7 @@ pip install -e OJBench
 
 ---
 
-### 3. 🗂️ Download Test Data
+### 3. Download Test Data
 
 Test inputs are hosted on Hugging Face:
 [https://huggingface.co/He-Ren/OJBench\_testdata](https://huggingface.co/He-Ren/OJBench_testdata)
@@ -142,7 +142,7 @@ OJBench_testdata/
 
 ---
 
-## 🤖 Generating Model Responses
+## Generating Model Responses
 
 The `full.jsonl` file contains one prompt per line, each formatted as a JSON object with the following fields:
 
