@@ -74,7 +74,7 @@ Clone the OJBench repository:
 git clone git@github.com:He-Ren/OJBench.git
 ```
 
-#### ⚙️ Runtime Configuration
+#### Runtime Configuration
 
 OJBench uses a runtime configuration file to locate these tools. Open:
 
