@@ -113,7 +113,7 @@ pip install -e OJBench
 ### 3. Download Test Data
 
 Test inputs are hosted on Hugging Face:
-[https://huggingface.co/He-Ren/OJBench\_testdata](https://huggingface.co/He-Ren/OJBench_testdata)
+[https://huggingface.co/datasets/He-Ren/OJBench\_testdata](https://huggingface.co/datasets/He-Ren/OJBench_testdata)
 
 If you don't have Git LFS, install it first:
 
@@ -124,7 +124,7 @@ git lfs install
 Then clone the dataset:
 
 ```bash
-git clone https://huggingface.co/He-Ren/OJBench_testdata
+git clone https://huggingface.co/datasets/He-Ren/OJBench_testdata
 ```
 
 The data is structured as follows:
