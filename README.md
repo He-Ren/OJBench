@@ -1,4 +1,4 @@
-<h1 align="center">OJBench</h1><p align="center">  <i>A Competition Level Code Benchmark For Large Language Models</i></p><p align="center">  <a href="https://arxiv.org/pdf/2506.16395">    📄 Paper  </a>  &nbsp; | &nbsp;  <a href="https://he-ren.github.io/OJBench/leaderboard.html">    🏆 <b>Leaderboard</b>  </a>
+<h1 align="center">OJBench</h1><p align="center">  <i>A Competition Level Code Benchmark For Large Language Models</i></p><p align="center">  <a href="https://arxiv.org/pdf/2506.16395">    📄 Paper  </a>  &nbsp; | &nbsp;  <a href="https://he-ren.github.io/OJBench-Leaderboard/">    🏆 <b>Leaderboard</b>  </a>
 
 ## 📘 Introduction
 
