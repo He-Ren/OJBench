@@ -1,4 +1,7 @@
 # OJBench
+
+🏆 [Leaderboard](./leaderboard.html)
+
 Official repository for the paper [OJBench: A Competition Level Code Benchmark For Large Language Models](https://arxiv.org/pdf/2506.16395)
 
 
